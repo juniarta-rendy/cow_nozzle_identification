@@ -1,89 +1,112 @@
-import os
-import numpy as np
 import cv2
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import numpy as np
+import os
+import re
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
+from sklearn.feature_selection import chi2
+
+# Directory containing training images
+train_dir = r"noseprint"
+model_dir = r"model/output"
+
+# Ensure the model directory exists
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
+
+# Initialize ORB detector
+orb = cv2.ORB_create()
+
+# Initialize lists for descriptors and labels
+descriptors = []
+labels = []
+label_dict = {}
+recap_label = {} 
+label_id = 0
+
+# Labels
+folder_path = r'images/1024x1024'
+images_name = [file for file in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, file))]
+
+def create_dictionary(folder_path):
+
+  dictionary = {}
+
+  for subdir, _, files in os.walk(folder_path):
+    subfolder_name = os.path.basename(subdir)
+    if subfolder_name != folder_path:  # Skip the main folder
+      dictionary[subfolder_name] = files
+
+  return dictionary, list(dictionary.keys())
+
+# Example usage:
+folder_path = "data_moncong_sapi"
+cows_dict, label_names = create_dictionary(folder_path)
+   
+n = 0
+
+# Iterate through training images
+for filename in os.listdir(train_dir):
+    if filename.endswith(".jpg"):
+        # Read image
+        img_path = os.path.join(train_dir, filename)
+        img = cv2.imread(img_path)
+
+        # Detect and compute features
+        keypoints, des = orb.detectAndCompute(img, None)
+        if des is not None:
+            descriptors.append(des)
+                # Mencari nomor index label
+            for key, value in cows_dict.items():
+                if filename in value:
+                  label_index = key
+                  break
+            
+            if label_index not in recap_label:
+                recap_label[label_index] = []
+                recap_label[label_index].append(n)
+            else:
+               recap_label[label_index].append(n)
+
+            if n not in label_dict:
+               label_dict[images_name[n]] = n
+            labels.extend([n] * len(des))
+            n = n + 1
+
+id_dict = {x: id_value for x, id_value in enumerate(recap_label.values())}
+
+# Convert to numpy arrays
+descriptors = np.vstack(descriptors)
+labels = np.array(labels)
+new_labels = []
+
+# ubah id pada "labels" menjadi nama pemilik sapi
+i = 0
+for a in labels:
+  for key, value in id_dict.items():
+     if a in value:
+        new_labels.append(key)
+  n+=1
+
+labels = np.array(new_labels)
 
 
-# Load and preprocess data
-def load_data(data_dir):
-    images = []
-    labels = []
-    for class_folder in os.listdir(data_dir):
-        class_path = os.path.join(data_dir, class_folder)
-        for img_file in os.listdir(class_path):
-            img_path = os.path.join(class_path, img_file)
-            img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-            img = cv2.resize(img, (150, 150)) / 255.0
-            images.append(img)
-            labels.append(class_folder)
-    return np.array(images), np.array(labels)
+# Split data (80% train, 20% test)
+des_train, des_test, labels_train, labels_test = train_test_split(descriptors, labels, test_size=0.2, random_state=42)
 
-# Create a CNN model
-def create_model():
-    model = Sequential([
-        Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 1)),
-        MaxPooling2D(2, 2),
-        Conv2D(64, (3, 3), activation='relu'),
-        MaxPooling2D(2, 
- 2),
-        Flatten(),
-        Dense(128, activation='relu'),
-        Dense(num_classes, activation='softmax')
-    ])
-    return model
+# Train k-NN classifier
+knn = cv2.ml.KNearest_create()
+knn.train(descriptors.astype(np.float32), cv2.ml.ROW_SAMPLE, labels)
 
-# Load data
-X, y = load_data('noseprint')
+# Save model yang telah dilatih dan label dictionary
+model_path = os.path.join(model_dir, "cowrec_knn_model.xml")
+knn.save(model_path)
+label_dict_path = os.path.join(model_dir, "label_dict.npy")
+np.save(label_dict_path, label_dict)
 
-# One-hot encode labels
-from sklearn.preprocessing import LabelEncoder
-label_encoder = LabelEncoder()
-y_encoded = label_encoder.fit_transform(y)
-num_classes = len(label_encoder.classes_)
+# Evaluasi akurasin pada data test
+ret, results, neighbours, dist = knn.findNearest(des_test.astype(np.float32), k=3)
+correct_predictions = np.sum(results.flatten() == labels_test)
+accuracy = correct_predictions / len(labels_test) * 100
 
+print(f"Training completed and model saved. Test Accuracy: {accuracy:.2f}%")
 
-# Split data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, 
- y_encoded, test_size=0.2, random_state=42)
-
-# Data augmentation
-datagen = ImageDataGenerator(
-    rotation_range=20,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    shear_range=0.2,
-
-    zoom_range=0.2,
-    horizontal_flip=True,
-    fill_mode='nearest' 
-
-)
-
-# Create and compile the model
-model = create_model()
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
-# Train the model
-history = model.fit(datagen.flow(X_train, y_train, batch_size=32),
-                    epochs=20,
-                    validation_data=(X_test,y_test))
-
-# Evaluate the model
-test_loss, test_acc = model.evaluate(X_test, y_test)
-print('Test accuracy:', test_acc)
-
-
-# Make predictions
-predictions = model.predict(X_test)
-predicted_classes = np.argmax(predictions, axis=1)
-
-# Print classification report
-print(classification_report(y_test, predicted_classes))
-
-# Save the model
-model.save('model/output/cow_noseprint_model.h5')

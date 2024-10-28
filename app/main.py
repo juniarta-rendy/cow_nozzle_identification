@@ -13,6 +13,8 @@ knn = cv2.ml.KNearest_load(model_path)
 label_dict_path = r'model//output//label_dict.npy'
 label_dict = np.load(label_dict_path, allow_pickle=True).item()
 reverse_label_dict = {v: k for k, v in label_dict.items()}
+owner_dict_path = r'model//output//cows_dict.npy'
+owner_dict = np.load(owner_dict_path, allow_pickle=True).item()
 
 # ORB detector
 orb = cv2.ORB_create()
@@ -54,6 +56,10 @@ def on_drop(event):
         predicted_label_id = np.argmax(label_counts)
 
         predicted_label = reverse_label_dict[predicted_label_id]
+        for key,value in owner_dict.items():
+            if predicted_label in value:
+                predicted_label = key
+                break
         result_text = f"Sapi Milik: {predicted_label}"
         result_label.config(text=result_text, bg='green', font=("Helvetica", 20))
     else:

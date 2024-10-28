@@ -9,21 +9,24 @@ def create_dictionary(folder_path):
     if subfolder_name != folder_path:  # Skip the main folder
       dictionary[subfolder_name] = files
 
-  return dictionary
+  return dictionary,dictionary.keys()
 
 # Example usage:
 folder_path = "data_moncong_sapi"
-cow_images_dict = create_dictionary(folder_path)
+cows_dict, label_names = create_dictionary(folder_path)
+label_names = list(label_names)
 
-print(cow_images_dict.keys())
-print(cow_images_dict)
+for name in label_names:
+   globals()[name] = []
+
+print(type(label_names))
 
 
 
 
 '''
 import numpy as np
-s
+
 # Load the NPY file into a NumPy array
 data = np.load('model/output/label_dict.npy', allow_pickle=True)
 
