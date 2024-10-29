@@ -27,27 +27,27 @@ def convert_image(image):
     
     inverted_image = cv2.bitwise_not(adaptive_thresh)
     
-    # Apply morphological operations to enhance the patterns (optional)
+    # Apli morphological operations to enhance the patterns (optional)
     kernel = np.ones((3, 3), np.uint8)
     processed_image = cv2.morphologyEx(inverted_image, cv2.MORPH_CLOSE, kernel)
 
-    # Resize the processed image to 256x256 (as used for model input)
+    # Resize gambar ke 256x256 (digunakan untuk input)
     processed_image = cv2.resize(processed_image, (256, 256))
 
     return processed_image
 
-# Function to handle file drop
+# Function untuk input gambar ke UI (drop gambar)
 def on_drop(event):
-    file_path = event.data.strip('{}')  # Handle dropped file path
+    file_path = event.data.strip('{}')  # lokasi/path file gambar
 
-    # Process the dropped image
+    # Proses gambar yang diinput
     original_image, processed_image = process_image(file_path)
 
-    # Display images
+    # Display Gambar
     display_image(original_image, original_label)
     display_image(processed_image, processed_label)
 
-    # Predict the class of the processed image using ORB and KNN
+    # Prediksi label gambar menggunakan ORB and KNN
     keypoints, test_des = orb.detectAndCompute(processed_image, None)
 
     if test_des is not None:
@@ -80,7 +80,7 @@ def process_image(image_path):
 
 # Function to display an image on a label
 def display_image(cv_img, label):
-    # Convert the image to RGB format
+    # Convert gambar ke format RGB
     cv_img_rgb = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
     # Convert to PIL Image
     pil_img = Image.fromarray(cv_img_rgb)
@@ -91,7 +91,7 @@ def display_image(cv_img, label):
     label.config(image=imgtk)
     label.image = imgtk
 
-# Set up the GUI
+# Set up GUI
 root = TkinterDnD.Tk()
 root.title("Rendy Tampan")
 root.geometry("800x600")

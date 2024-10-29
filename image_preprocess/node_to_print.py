@@ -3,17 +3,16 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-# Paths to the directories
+# Paths ke directories
 input_dir = 'images/1024x1024'
 output_dir = 'noseprint'
 os.makedirs(output_dir, exist_ok=True)
 
-# Function to process and convert the image
+# Function untuk proses dan conver gambar
 def convert_image(image_path, output_path):
-    # Read the image
     image = cv2.imread(image_path)
 
-    # Convert to grayscale
+    # Convert ke grayscale
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Apply adaptive thresholding
@@ -32,10 +31,10 @@ def convert_image(image_path, output_path):
 
     print(f"Processed and saved: {output_path}")
 
-# Get list of image files in the input directory
+# List tiap gambar pada input
 image_files = [f for f in os.listdir(input_dir) if f.endswith('.jpg') or f.endswith('.png')]
 
-# Process each image
+# Process setiap gambar
 for image_file in image_files:
     input_path = os.path.join(input_dir, image_file)
     output_path = os.path.join(output_dir, image_file)
