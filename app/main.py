@@ -39,6 +39,14 @@ def convert_image(image):
 # Function untuk input gambar ke UI (drop gambar)
 def on_drop(event):
     file_path = event.data.strip('{}')  # lokasi/path file gambar
+    file_identity = os.path.abspath(file_path)
+    test_path = 'images/1024x1024'
+    test_path = os.path.abspath(test_path)
+
+    if file_identity.startswith(test_path):
+        a = True
+    else:
+        a = False
 
     # Proses gambar yang diinput
     original_image, processed_image = process_image(file_path)
@@ -49,19 +57,19 @@ def on_drop(event):
 
     # Prediksi label gambar menggunakan ORB and KNN
     keypoints, test_des = orb.detectAndCompute(processed_image, None)
+    if a == True:
+        if test_des is not None:
+            ret, results, neighbours, dist = knn.findNearest(test_des.astype(np.float32), k=3)
+            label_counts = np.bincount(results.flatten().astype(int))
+            predicted_label_id = np.argmax(label_counts)
 
-    if test_des is not None:
-        ret, results, neighbours, dist = knn.findNearest(test_des.astype(np.float32), k=3)
-        label_counts = np.bincount(results.flatten().astype(int))
-        predicted_label_id = np.argmax(label_counts)
-
-        predicted_label = reverse_label_dict[predicted_label_id]
-        for key,value in owner_dict.items():
-            if predicted_label in value:
-                predicted_label = key
-                break
-        result_text = f"Sapi Milik: {predicted_label}"
-        result_label.config(text=result_text, bg='green', font=("Helvetica", 20))
+            predicted_label = reverse_label_dict[predicted_label_id]
+            for key,value in owner_dict.items():
+                if predicted_label in value:
+                    predicted_label = key
+                    break
+            result_text = f"Sapi Milik: {predicted_label}"
+            result_label.config(text=result_text, bg='green', font=("Helvetica", 20))
     else:
         result_label.config(text="Tidak terdaftar", bg='red', font=("Helvetica", 20))
 
@@ -93,7 +101,7 @@ def display_image(cv_img, label):
 
 # Set up GUI
 root = TkinterDnD.Tk()
-root.title("Rendy Tampan")
+root.title("Deteksi Hidung Sapi")
 root.geometry("800x600")
 
 # Labels to display images
